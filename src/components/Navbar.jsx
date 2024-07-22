@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {getData} from "../function/funzioni.js";
 
-function Navbar({changeDay, changeOra, changeFiltro, setCanale}) {
+function Navbar({setDay, setOra, setFiltro, setCanale}) {
 
     const [currentDay, setCurrentDay] = useState('OGGI');
     const [contDay, setContDay] = useState(0);
@@ -16,7 +16,7 @@ function Navbar({changeDay, changeOra, changeFiltro, setCanale}) {
                 const cont = contDay;
                 setContDay(cont+1);
                 let xDay = getData(cont+1);
-                changeDay(xDay)
+                setDay(xDay)
                 if(contDay === 0){
                     setCurrentDay('DOMANI');
                 }else{
@@ -30,7 +30,7 @@ function Navbar({changeDay, changeOra, changeFiltro, setCanale}) {
                     const cont = contDay;
                     setContDay(cont-1);
                     let xDay = getData(cont-1);
-                    changeDay(xDay)
+                    setDay(xDay)
                     if(contDay === 1){
                         setCurrentDay('OGGI');
                     }else{
@@ -50,7 +50,7 @@ function Navbar({changeDay, changeOra, changeFiltro, setCanale}) {
             <div className="navbar">
                 
                 <div className="menu-home">
-                    <span onClick={() => {changeOra(1); changeFiltro(1); setCanale([])}} className="material-symbols-outlined">home</span>
+                    <span onClick={() => {setOra(1); setFiltro(1); setCanale([])}} className="material-symbols-outlined">home</span>
                 </div>
 
                 <div className="text">

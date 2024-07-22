@@ -1,13 +1,24 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Orari from './components/Orari';
 import Telecomando from './components/Telecomando';
 import ListaProgrammi from './components/ListaProgrammi';
 import Filtri from './components/Filtri';
-import SkeletonApp from './components/SkeletonApp';
-import {getData} from "./function/funzioni";
+import { getData } from "./function/funzioni";
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, query, getDocs } from 'firebase/firestore';
+import Skeleton from './components/SkeletonApp';
 
-function App(){
+const firebaseConfig = {
+    apiKey: "",
+    authDomain: "",
+    projectId: ""
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const firestore = getFirestore(firebaseApp);
+
+function App() {
     const [canali] = useState(
         [
             {
@@ -110,80 +121,117 @@ function App(){
     const [ora, setOra] = useState(1);
     const [canale, setCanale] = useState([]);
     const [filtro, setFiltro] = useState(1);
+    const [listaProgrammi, setListaProgrammi] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [checkLista, setCheckLista] = useState(true);
-
-    function changeDay(xDay) {
-        if (day !== xDay) {
-            setDay(xDay);
-        }
-    }
-
-    function changeOra(xOra) {
-        if (ora !== xOra) {
-            setOra(xOra);
-        }
-    }
-
-    function changeCanale(xCanale) {
-        if (canale.numero !== xCanale.numero) {
-            setCanale(xCanale);
-        }
-    }
-
-    function changeFiltro(xFiltro) {
-        if (filtro !== xFiltro) {
-            setFiltro(xFiltro);
-        }
-    }
-
-    function changeCheckLista(xCheckLista) {
-        if (checkLista !== xCheckLista) {
-            setCheckLista(xCheckLista);
-        }
-    }
+    const [attempts] = useState(0);
+    const [error, setError] = useState(false);
 
     function openMenuCanali() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth' 
-          });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         document.getElementById('menu_canali').style.display = 'block';
         document.getElementById('pellicola').style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
 
     useEffect(() => {
-        setTimeout(() => setLoading(false), 1500);
-    }, []);
+        const lastOpen = localStorage.getItem('lastOpenDate');
+        const current_date = new Date().toLocaleDateString();
 
-    if (checkLista) {
-        if (canale.length === 0) {
+        async function getProgrammiFromFirestore() {
+            const programmiData = [];
+            try {
+                const programmiCollection = collection(firestore, 'programmi');
+                const q = query(programmiCollection);
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach((doc) => {
+                    programmiData.push({ id: doc.id, ...doc.data() });
+                });
+                localStorage.setItem('listaProgrammi', JSON.stringify(programmiData));
+            } catch (error) {
+               console.error(error);
+               setError(true);
+            }
+            setLoading(false);
+        }
+
+        function checkProgramAvailable() {
+            const programmi = JSON.parse(localStorage.getItem('listaProgrammi'));
+
+            if (programmi !== null && programmi.length > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        function fetchData() {
+
+            try {
+
+                if (lastOpen !== current_date || !checkProgramAvailable()) {
+                    console.log('Recupero dati');
+                    localStorage.setItem('lastOpenDate', current_date);
+                    setListaProgrammi(getProgrammiFromFirestore());
+                    setLoading(false);
+                }
+                
+            } catch (error) {
+                console.error("Errore durante il recupero dei dati:", error);
+                setLoading(false);
+                setError(true);
+            }
+            
+        }
+
+        fetchData();
+    }, [attempts, day, ora, canale, filtro, error, loading]);
+
+
+    if(error && listaProgrammi.length === 0){
+        return (
+            <div className="home">
+                <Navbar setDay={setDay} setOra={setOra} setFiltro={setFiltro} setCanale={setCanale} />
+                <Telecomando canali={canali} setCanale={setCanale} />
+                <div className='app'>
+                    <div className='pellicola' id='pellicola'></div>
+                    <Orari setOra={setOra} oraHome={ora} />
+                    <Filtri filtro={filtro} setFiltro={setFiltro} />
+                    <h1 style={ {textAlign : 'center', padding : '50px' }} >ERRORE CON IL CARICAMENTO DEI DATI<br/>TORNA DOMANI!!</h1>
+                    <div className="telecomando" onClick={openMenuCanali}>
+                        <span className="material-symbols-outlined">remote_gen</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }else{
+        if (!loading) {
             return (
-                <div className='home'>
-                    <Navbar changeDay={changeDay} changeOra={changeOra} changeFiltro={changeFiltro} setCanale={setCanale} />
-                    <Telecomando canali={canali} changeCanale={changeCanale} />
+                <div className="home">
+                    <Navbar setDay={setDay} setOra={setOra} setFiltro={setFiltro} setCanale={setCanale} />
+                    <Telecomando canali={canali} setCanale={setCanale} />
                     <div className='app'>
                         <div className='pellicola' id='pellicola'></div>
-                        <Orari changeOra={changeOra} oraHome={ora} />
-                        <Filtri filtro={filtro} changeFiltro={changeFiltro} />
-
-                        <div className='lista_programmi'>
-                            {
-                                loading ? (
-                                    <SkeletonApp />
-                                ) : (
-                                    canali.length > 0 ? (
-                                        canali.map((canale, index) => (
-                                            <ListaProgrammi c={canale} day={day} ora={ora} filtro={filtro} changeCanale={changeCanale} type={false} checkLista={changeCheckLista} key={index} />
-                                        ))
-                                    ) : (
-                                        <h1>Nessun canale disponibile</h1>
-                                    )
-                                )
-                            }
+                        <Orari setOra={setOra} oraHome={ora} />
+                        <Filtri filtro={filtro} setFiltro={setFiltro} />
+                        <Skeleton/>
+                        <div className="telecomando" onClick={openMenuCanali}>
+                            <span className="material-symbols-outlined">remote_gen</span>
                         </div>
-
+                    </div>
+                </div>
+            );
+        } else if (canale.length === 1) {
+            return (
+                <div className='home'>
+                    <Navbar setDay={setDay} setOra={setOra} setFiltro={setFiltro} setCanale={setCanale} />
+                    <Telecomando canali={canali} setCanale={setCanale} />
+                    <div className='app'>
+                        <div className='pellicola' id='pellicola'></div>
+                        <Orari setOra={setOra} oraHome={ora} />
+                        <Filtri filtro={filtro} setFiltro={setFiltro} />
+                        <div className='lista_programmi'>
+                            <ListaProgrammi c={canale} day={day} ora={ora} filtro={filtro} programmi={listaProgrammi} setCanale={setCanale}/>
+                        </div>
                         <div className="telecomando" onClick={openMenuCanali}>
                             <span className="material-symbols-outlined">remote_gen</span>
                         </div>
@@ -193,22 +241,17 @@ function App(){
         } else {
             return (
                 <div className='home'>
-                    <Navbar changeDay={changeDay} changeOra={changeOra} changeFiltro={changeFiltro} setCanale={setCanale} />
-                    <Telecomando canali={canali} changeCanale={changeCanale} />
+                    <Navbar setDay={setDay} setOra={setOra} setFiltro={setFiltro} setCanale={setCanale} />
+                    <Telecomando canali={canali} setCanale={setCanale} />
                     <div className='app'>
                         <div className='pellicola' id='pellicola'></div>
-                        <Orari changeOra={changeOra} oraHome={ora} />
-                        <Filtri filtro={filtro} changeFiltro={changeFiltro} />
-                        {
-                            loading ? (
-                                <SkeletonApp />
-                            ) : (
-                                <div className='lista_programmi'>
-                                    <ListaProgrammi c={canale} day={day} ora={ora} type={true} filtro={filtro} />
-                                </div>
-                            )
-                        }
-
+                        <Orari setOra={setOra} oraHome={ora} />
+                        <Filtri filtro={filtro} setFiltro={setFiltro} />
+                        <div className='lista_programmi'>
+                            {canali.map((canale, index) => (
+                                <ListaProgrammi c={canale} day={day} ora={ora} filtro={filtro} programmi={listaProgrammi} setCanale={setCanale} key={index} />
+                            ))}
+                        </div>
                         <div className="telecomando" onClick={openMenuCanali}>
                             <span className="material-symbols-outlined">remote_gen</span>
                         </div>
@@ -216,21 +259,6 @@ function App(){
                 </div>
             );
         }
-    } else {
-        return (
-            <div className="home">
-                <Navbar changeDay={changeDay} changeOra={changeOra} changeFiltro={changeFiltro} setCanale={setCanale} />
-                <div className="app">
-                    <Orari changeOra={changeOra} oraHome={ora} />
-                    <Filtri filtro={filtro} changeFiltro={changeFiltro} />
-
-                    <div className="error">
-                        <h1>Nessun programma disponibile</h1>
-                        <h1>{day}</h1>
-                    </div>
-                </div>
-            </div>
-        );
     }
 }
 

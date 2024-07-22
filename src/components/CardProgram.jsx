@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 export default function CardProgram({oraInizio, oraFine, title}){ 
 
     const now = new Date();

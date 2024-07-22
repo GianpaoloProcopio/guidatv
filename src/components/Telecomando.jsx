@@ -1,4 +1,4 @@
-export default function Telecomando({canali, changeCanale}){
+export default function Telecomando({canali, setCanale}){
 
     function closeMenu(){
         document.getElementById('menu_canali').style.display = 'none';
@@ -18,7 +18,7 @@ export default function Telecomando({canali, changeCanale}){
                 {
                     canali.length > 0 ? (
                         canali.map((canale, index) => (
-                            <div className="canale" onClick={ () => {changeCanale(canale); closeMenu();}} key={index}>
+                            <div className="canale" onClick={ () => {setCanale(canale); closeMenu();}} key={index}>
                                 <img src={canale.logo} alt="logo" />
                                 <h3>{canale.nome}</h3>
                                 <h6>{canale.numero}</h6>

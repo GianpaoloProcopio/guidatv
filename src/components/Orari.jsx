@@ -1,7 +1,7 @@
-export default function Orari({changeOra, oraHome}){
+export default function Orari({setOra, oraHome}){
 
     function handleChangeOra(xOra){
-        changeOra(xOra);
+        setOra(xOra);
     }
 
     return(
